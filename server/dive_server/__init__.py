@@ -10,10 +10,11 @@ from girder.utility.model_importer import ModelImporter
 
 from dive_utils.constants import SETTINGS_CONST_JOBS_CONFIGS, UserPrivateQueueEnabledMarker
 
+from .annotation_views import AnnotationResource
 from .client_webroot import ClientWebroot
+from .dataset_views import DatasetResource
 from .event import process_fs_import, process_s3_import, send_new_user_email
 from .viame import Viame
-from .viame_detection import ViameDetection
 from .viame_summary import SummaryItem, ViameSummary
 
 
@@ -36,8 +37,9 @@ class GirderPlugin(plugin.GirderPlugin):
         User().exposeFields(AccessType.READ, UserPrivateQueueEnabledMarker)
 
         info["apiRoot"].viame = Viame()
-        info["apiRoot"].viame_detection = ViameDetection()
         info["apiRoot"].viame_summary = ViameSummary()
+        info["apiRoot"].dive_annotation = AnnotationResource("dive_annotation")
+        info["apiRoot"].dive_dataset = DatasetResource("dive_dataset")
 
         DIVE_MAIL_TEMPLATES = Path(os.path.realpath(__file__)).parent / 'mail_templates'
         mail_utils.addTemplateDirectory(str(DIVE_MAIL_TEMPLATES))

@@ -20,7 +20,7 @@ from dive_tasks.tasks import (
     train_pipeline,
     upgrade_pipelines,
 )
-from dive_utils import TRUTHY_META_VALUES, fromMeta, models
+from dive_utils import TRUTHY_META_VALUES, fromMeta
 from dive_utils.constants import (
     JOBCONST_PIPELINE_NAME,
     JOBCONST_PRIVATE_QUEUE,
@@ -55,7 +55,6 @@ from .utils import (
     process_csv,
     process_json,
     saveTracks,
-    valid_images,
     verify_dataset,
 )
 
@@ -65,7 +64,9 @@ class Viame(Resource):
         super(Viame, self).__init__()
         self.resourceName = "viame"
 
+        # TODO: move to dataset_views
         self.route("GET", ("datasets",), self.list_datasets)
+        # TODO: move to dataset_views
         self.route("POST", ("dataset", ":id", "clone"), self.clone_dataset)
         self.route("GET", ("brand_data",), self.get_brand_data)
         self.route("GET", ("pipelines",), self.get_pipelines)
@@ -75,10 +76,7 @@ class Viame(Resource):
         self.route("POST", ("upgrade_pipelines",), self.upgrade_pipelines)
         self.route("POST", ("update_job_configs",), self.update_job_configs)
         self.route("POST", ("postprocess", ":id"), self.postprocess)
-        self.route("PUT", ("metadata", ":id"), self.update_metadata)
-        self.route("PUT", ("attributes",), self.save_attributes)
         self.route("POST", ("validate_files",), self.validate_files)
-        self.route("GET", ("valid_images",), self.get_valid_images)
         self.route("PUT", ("user", ":id", "use_private_queue"), self.use_private_queue)
 
     def _get_queue_name(self, default="celery"):
@@ -460,86 +458,6 @@ class Viame(Resource):
             saveTracks(folder, {}, user)
 
         return folder
-
-    @access.user
-    @autoDescribeRoute(
-        Description("Save mutable metadata for a dataset")
-        .modelParam(
-            "id",
-            description="datasetId or folder for the metadata",
-            model=Folder,
-            level=AccessType.WRITE,
-        )
-        .jsonParam(
-            "data",
-            "JSON with the metadata to set",
-            requireObject=True,
-            paramType="body",
-        )
-        .errorResponse('Using a reserved metadata key', 400)
-    )
-    def update_metadata(self, folder, data):
-        verify_dataset(folder)
-        validated = models.MetadataMutableUpdate(**data)
-        for name, value in validated.dict(exclude_none=True).items():
-            folder['meta'][name] = value
-        Folder().save(folder)
-        return folder['meta']
-
-    @access.user
-    @autoDescribeRoute(
-        Description("")
-        .modelParam(
-            "folderId",
-            description="folder id of a clip",
-            model=Folder,
-            paramType="query",
-            required=True,
-            level=AccessType.WRITE,
-        )
-        .jsonParam(
-            "attributes",
-            "upsert and delete attributes",
-            paramType="body",
-            requireObject=True,
-        )
-    )
-    def save_attributes(self, folder, attributes):
-        verify_dataset(folder)
-        upsert = attributes.get('upsert', [])
-        delete = attributes.get('delete', [])
-        attributes_dict = fromMeta(folder, 'attributes', {})
-        for attribute_id in delete:
-            attributes_dict.pop(str(attribute_id), None)
-        for attribute in upsert:
-            validated: models.Attribute = models.Attribute(**attribute)
-            attributes_dict[str(validated.key)] = validated.dict(exclude_none=True)
-
-        upserted_len = len(upsert)
-        deleted_len = len(delete)
-
-        if upserted_len or deleted_len:
-            folder['meta']['attributes'] = attributes_dict
-            Folder().save(folder)
-
-        return {
-            "updated": upserted_len,
-            "deleted": deleted_len,
-        }
-
-    @access.user
-    @autoDescribeRoute(
-        Description("").modelParam(
-            "folderId",
-            description="folder id of a clip",
-            model=Folder,
-            paramType="query",
-            required=True,
-            level=AccessType.READ,
-        )
-    )
-    def get_valid_images(self, folder):
-        return valid_images(folder, self.getCurrentUser())
 
     @access.user
     @autoDescribeRoute(

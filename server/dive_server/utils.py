@@ -7,33 +7,27 @@ from pathlib import Path
 from typing import Callable, Dict, Generator, List, Optional, Tuple, Type
 
 from girder.constants import AccessType
-from girder.exceptions import RestException
+from girder.exceptions import RestException, ValidationException
 from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.model_base import AccessControlledModel
 from girder.models.upload import Upload
+import pydantic
 from pydantic.main import BaseModel
 import pymongo
 from pymongo.cursor import Cursor
 
-from dive_utils import asbool, fromMeta, models, strNumericCompare
-from dive_utils.constants import (
-    ConfidenceFiltersMarker,
-    DatasetMarker,
-    DetectionMarker,
-    ForeignMediaIdMarker,
-    FPSMarker,
-    ImageSequenceType,
-    PublishedMarker,
-    TypeMarker,
-    VideoType,
-    csvRegex,
-    jsonRegex,
-    safeImageRegex,
-)
+from dive_utils import asbool, constants, fromMeta, models, strNumericCompare
 from dive_utils.serializers import kwcoco, viame
 from dive_utils.types import GirderModel
+
+
+def get_validated_model(model: BaseModel, **kwargs):
+    try:
+        return model(**kwargs)
+    except pydantic.ValidationError as err:
+        raise ValidationException(err)
 
 
 class PydanticModel(AccessControlledModel):
@@ -54,7 +48,11 @@ class PydanticModel(AccessControlledModel):
 
 def all_detections_items(folder: Folder) -> Cursor:
     """Caller is responsible for verifying access permissions"""
-    return Item().find({f"meta.{DetectionMarker}": str(folder['_id'])}).sort([("created", -1)])
+    return (
+        Item()
+        .find({f"meta.{constants.DetectionMarker}": str(folder['_id'])})
+        .sort([("created", -1)])
+    )
 
 
 def detections_item(folder: Folder, strict=False) -> Optional[GirderModel]:
@@ -65,8 +63,11 @@ def detections_item(folder: Folder, strict=False) -> Optional[GirderModel]:
     return first_item
 
 
-def detections_file(folder: Folder, strict=False) -> Optional[GirderModel]:
-    item = detections_item(folder, strict)
+def detections_file(dsFolder: GirderModel, strict=False) -> Optional[GirderModel]:
+    """
+    Find the Girder file containing the most recent annotation revision
+    """
+    item = detections_item(dsFolder, strict)
     if item is None and not strict:
         return None
     first_file = next(Item().childFiles(item), None)
@@ -144,7 +145,9 @@ def saveTracks(folder, tracks, user):
 
     move_existing_result_to_auxiliary_folder(folder, user)
     newResultItem = Item().createItem(item_name, user, folder)
-    Item().setMetadata(newResultItem, {DetectionMarker: str(folder["_id"])}, allowNull=True)
+    Item().setMetadata(
+        newResultItem, {constants.DetectionMarker: str(folder["_id"])}, allowNull=True
+    )
 
     json_bytes = json.dumps(tracks).encode()
     byteIO = io.BytesIO(json_bytes)
@@ -173,7 +176,7 @@ def saveImportAttributes(folder, attributes, user):
 
 def verify_dataset(folder: GirderModel):
     """Verify that a given folder is a DIVE dataset"""
-    if not asbool(fromMeta(folder, DatasetMarker, False)):
+    if not asbool(fromMeta(folder, constants.DatasetMarker, False)):
         raise RestException('Source folder is not a valid DIVE dataset')
     return True
 
@@ -182,7 +185,7 @@ def process_csv(folder: GirderModel, user: GirderModel):
     """If there's a CSV in the folder, process it as a detections object"""
     csvItems = Folder().childItems(
         folder,
-        filters={"lowerName": {"$regex": csvRegex}},
+        filters={"lowerName": {"$regex": constants.csvRegex}},
         sort=[("created", pymongo.DESCENDING)],
     )
     if csvItems.count() >= 1:
@@ -203,7 +206,7 @@ def process_json(folder: GirderModel, user: GirderModel):
     jsonItems = list(
         Folder().childItems(
             folder,
-            filters={"lowerName": {"$regex": jsonRegex}},
+            filters={"lowerName": {"$regex": constants.jsonRegex}},
             sort=[("created", pymongo.DESCENDING)],
         )
     )
@@ -216,7 +219,7 @@ def process_json(folder: GirderModel, user: GirderModel):
             saveImportAttributes(folder, attributes, user)
             Item().move(item, auxiliary)
         else:  # dive json
-            item['meta'][DetectionMarker] = str(folder['_id'])
+            item['meta'][constants.DetectionMarker] = str(folder['_id'])
             Item().save(item)
     if len(jsonItems) > 0:
         move_existing_result_to_auxiliary_folder(folder, user)
@@ -227,7 +230,7 @@ def process_json(folder: GirderModel, user: GirderModel):
 def getCloneRoot(owner: GirderModel, source_folder: GirderModel):
     """Get the source media folder associated with a clone"""
     verify_dataset(source_folder)
-    next_id = fromMeta(source_folder, ForeignMediaIdMarker, False)
+    next_id = fromMeta(source_folder, constants.ForeignMediaIdMarker, False)
     while next_id is not False:
         # Recurse through source folders to find the root, allowing clones of clones
         source_folder = Folder().load(
@@ -241,7 +244,7 @@ def getCloneRoot(owner: GirderModel, source_folder: GirderModel):
                 " This may be a cloned dataset where the source was deleted."
             )
         verify_dataset(source_folder)
-        next_id = fromMeta(source_folder, ForeignMediaIdMarker, False)
+        next_id = fromMeta(source_folder, constants.ForeignMediaIdMarker, False)
     return source_folder
 
 
@@ -260,11 +263,11 @@ def createSoftClone(
     )
     cloned_folder['meta'] = source_folder['meta']
     media_source_folder = getCloneRoot(owner, source_folder)
-    cloned_folder['meta'][ForeignMediaIdMarker] = str(media_source_folder['_id'])
-    cloned_folder['meta'][PublishedMarker] = False
+    cloned_folder['meta'][constants.ForeignMediaIdMarker] = str(media_source_folder['_id'])
+    cloned_folder['meta'][constants.PublishedMarker] = False
     # ensure confidence filter metadata exists
-    if ConfidenceFiltersMarker not in cloned_folder['meta']:
-        cloned_folder['meta'][ConfidenceFiltersMarker] = {'default': 0.1}
+    if constants.ConfidenceFiltersMarker not in cloned_folder['meta']:
+        cloned_folder['meta'][constants.ConfidenceFiltersMarker] = {'default': 0.1}
 
     Folder().save(cloned_folder)
     get_or_create_auxiliary_folder(cloned_folder, owner)
@@ -273,7 +276,7 @@ def createSoftClone(
         cloned_detection_item = Item().copyItem(
             source_detections, creator=owner, folder=cloned_folder
         )
-        cloned_detection_item['meta'][DetectionMarker] = str(cloned_folder['_id'])
+        cloned_detection_item['meta'][constants.DetectionMarker] = str(cloned_folder['_id'])
         Item().save(cloned_detection_item)
     else:
         saveTracks(cloned_folder, {}, owner)
@@ -289,7 +292,7 @@ def valid_images(
     """
     images = Folder().childItems(
         getCloneRoot(user, folder),
-        filters={"lowerName": {"$regex": safeImageRegex}},
+        filters={"lowerName": {"$regex": constants.safeImageRegex}},
     )
 
     def unwrapItem(item1, item2):
@@ -310,10 +313,10 @@ def get_annotation_csv_generator(
     fps = None
     imageFiles = None
 
-    source_type = fromMeta(folder, TypeMarker)
-    if source_type == VideoType:
-        fps = fromMeta(folder, FPSMarker)
-    elif source_type == ImageSequenceType:
+    source_type = fromMeta(folder, constants.TypeMarker)
+    if source_type == constants.VideoType:
+        fps = fromMeta(folder, constants.FPSMarker)
+    elif source_type == constants.ImageSequenceType:
         imageFiles = [img['name'] for img in valid_images(folder, user)]
 
     thresholds = fromMeta(folder, "confidenceFilters", {})

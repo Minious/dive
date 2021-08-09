@@ -185,13 +185,6 @@ async function validateUploadGroup(names: string[]): Promise<ValidationResponse>
   return data;
 }
 
-async function getValidWebImages(folderId: string) {
-  const { data } = await girderRest.get<GirderModel[]>('viame/valid_images', {
-    params: { folderId },
-  });
-  return data;
-}
-
 async function openFromDisk(datasetType: DatasetType | 'calibration' | 'annotation'):
 Promise<{ canceled: boolean; filePaths: string[]; fileList?: File[]}> {
   const input: HTMLInputElement = document.createElement('input');
@@ -248,6 +241,5 @@ export {
   saveAttributes,
   setUsePrivateQueue,
   validateUploadGroup,
-  getValidWebImages,
   openFromDisk,
 };

@@ -5,7 +5,7 @@ from girder.models.item import Item
 from girder.models.upload import Upload
 from girder.models.user import User
 
-from dive_server.utils import get_annotation_csv_generator
+from dive_server import utils
 from dive_utils.constants import ViameDataFolderName
 from dive_utils.types import GirderModel
 
@@ -43,7 +43,7 @@ def ensure_csv_detections_file(folder: Folder, detection_item: Item, user: User)
     TODO: move this to the training job code instead of keeping it
     in the request thread
     """
-    filename, gen = get_annotation_csv_generator(folder, user, excludeBelowThreshold=True)
+    filename, gen = utils.get_annotation_csv_generator(folder, user, excludeBelowThreshold=True)
     csv_bytes = ("".join([line for line in gen()])).encode()
     new_file = File().createFile(
         user,
