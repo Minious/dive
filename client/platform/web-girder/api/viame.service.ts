@@ -20,11 +20,11 @@ interface ValidationResponse {
 }
 
 export interface BrandData {
-  vuetify: unknown;
-  favicon: string | null;
-  logo: string;
-  name: string;
-  loginMessage: string;
+  vuetify?: unknown;
+  favicon?: string;
+  logo?: string;
+  name?: string;
+  loginMessage?: string;
 }
 interface HTMLFile extends File {
   webkitRelativePath?: string;

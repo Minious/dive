@@ -1,3 +1,4 @@
+"""General CRUD operations and utilities shared among views"""
 from datetime import datetime
 import functools
 import io
@@ -246,41 +247,6 @@ def getCloneRoot(owner: GirderModel, source_folder: GirderModel):
         verify_dataset(source_folder)
         next_id = fromMeta(source_folder, constants.ForeignMediaIdMarker, False)
     return source_folder
-
-
-def createSoftClone(
-    owner: GirderModel,
-    source_folder: GirderModel,
-    parent_folder: GirderModel,
-    name: str = None,
-):
-    """Create a no-copy clone of folder with source_id for owner"""
-    cloned_folder = Folder().createFolder(
-        parent_folder,
-        name or source_folder['name'],
-        description=f'Clone of {source_folder["name"]}.',
-        reuseExisting=False,
-    )
-    cloned_folder['meta'] = source_folder['meta']
-    media_source_folder = getCloneRoot(owner, source_folder)
-    cloned_folder['meta'][constants.ForeignMediaIdMarker] = str(media_source_folder['_id'])
-    cloned_folder['meta'][constants.PublishedMarker] = False
-    # ensure confidence filter metadata exists
-    if constants.ConfidenceFiltersMarker not in cloned_folder['meta']:
-        cloned_folder['meta'][constants.ConfidenceFiltersMarker] = {'default': 0.1}
-
-    Folder().save(cloned_folder)
-    get_or_create_auxiliary_folder(cloned_folder, owner)
-    source_detections = detections_item(source_folder)
-    if source_detections is not None:
-        cloned_detection_item = Item().copyItem(
-            source_detections, creator=owner, folder=cloned_folder
-        )
-        cloned_detection_item['meta'][constants.DetectionMarker] = str(cloned_folder['_id'])
-        Item().save(cloned_detection_item)
-    else:
-        saveTracks(cloned_folder, {}, owner)
-    return cloned_folder
 
 
 def valid_images(

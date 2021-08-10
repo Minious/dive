@@ -148,6 +148,14 @@ class CocoMetadata(BaseModel):
     videos: Dict[int, dict]
 
 
+class BrandData(BaseModel):
+    vuetify: Optional[dict]
+    favicon: Optional[str]
+    logo: Optional[str]
+    name: Optional[str]
+    loginMessage: Optional[str]
+
+
 # interpolate all features [a, b)
 def interpolate(a: Feature, b: Feature) -> List[Feature]:
     if a.interpolate is False:

@@ -6,7 +6,7 @@ from girder.api.rest import Resource, setContentDisposition, setResponseHeader
 from girder.constants import AccessType, TokenScope
 from girder.models.folder import Folder
 
-from . import annotation_crud, utils
+from . import crud, crud_annotation
 
 DatasetModelParam = {
     'description': "dataset id",
@@ -17,9 +17,7 @@ DatasetModelParam = {
 
 
 class AnnotationResource(Resource):
-    """
-    RESTFul Annotation Resource
-    """
+    """RESTFul Annotation Resource"""
 
     def __init__(self, resourceName):
         super(AnnotationResource, self).__init__()
@@ -37,7 +35,7 @@ class AnnotationResource(Resource):
         )
     )
     def get_annotations(self, folder):
-        return annotation_crud.get_annotations(folder)
+        return crud_annotation.get_annotations(folder)
 
     @access.public(scope=TokenScope.DATA_READ, cookie=True)
     @autoDescribeRoute(
@@ -60,7 +58,7 @@ class AnnotationResource(Resource):
         )
     )
     def export(self, folder, excludeBelowThreshold: bool, typeFilter: List[str]):
-        filename, gen = utils.get_annotation_csv_generator(
+        filename, gen = crud.get_annotation_csv_generator(
             folder,
             self.getCurrentUser(),
             excludeBelowThreshold=excludeBelowThreshold,
@@ -77,4 +75,4 @@ class AnnotationResource(Resource):
         .jsonParam("tracks", "upsert and delete tracks", paramType="body", requireObject=True)
     )
     def save_annotations(self, folder, tracks):
-        return annotation_crud.save_annotations(folder, self.getCurrentUser(), tracks)
+        return crud_annotation.save_annotations(folder, self.getCurrentUser(), tracks)
