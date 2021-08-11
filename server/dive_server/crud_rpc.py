@@ -301,7 +301,6 @@ def postprocess(
                 queue=_get_queue_name(user),
                 kwargs=dict(
                     folderId=str(item["folderId"]),
-                    auxiliaryFolderId=auxiliary["_id"],
                     itemId=str(item["_id"]),
                     girder_job_title=f"Converting {item['_id']} to a web friendly format",
                     girder_client_token=str(token["_id"]),

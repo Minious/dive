@@ -67,7 +67,7 @@ def get_dataset(
     dsFolder: types.GirderModel, user: types.GirderModel
 ) -> models.GirderMetadataStatic:
     """Transform a girder folder into a dataset metadata object"""
-    videoUrl = None
+    videoResource = None
     imageData: List[models.FrameImage] = []
     crud.verify_dataset(dsFolder)
     source_type = fromMeta(dsFolder, constants.TypeMarker)
@@ -82,11 +82,16 @@ def get_dataset(
             }
         )
         if videoItem:
-            videoFile = Item().childFiles(videoItem)[0]
-            videoUrl = get_url(videoFile)
+            videoFile: types.GirderModel = Item().childFiles(videoItem)[0]
+            videoResource = models.VideoResource(
+                id=videoFile['_id'],
+                url=get_url(videoFile),
+                filename=videoFile['name'],
+            )
     elif source_type == constants.ImageSequenceType:
         imageData = [
             models.FrameImage(
+                id=image["_id"],
                 url=get_url(image, modelType='item'),
                 filename=image['name'],
             )
@@ -98,7 +103,7 @@ def get_dataset(
     return models.GirderMetadataStatic(
         id=str(dsFolder['_id']),
         imageData=imageData,
-        videoUrl=videoUrl,
+        video=videoResource,
         createdAt=str(dsFolder['created']),
         name=dsFolder['name'],
         **dsFolder['meta'],

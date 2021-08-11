@@ -32,7 +32,9 @@ class DatasetResource(Resource):
         self.route("GET", (":id", "export"), self.export)
         self.route("GET", ("validate_files",), self.validate_files)
 
-        self.route("PATCH", (":id", "metadata"), self.patch_metadata)
+        self.route("PATCH", (":id"), self.patch_metadata)
+
+        # do we make this another resource in girder?
         self.route("PATCH", (":id", "attributes"), self.patch_attributes)
 
     @access.user
@@ -81,11 +83,10 @@ class DatasetResource(Resource):
             dataType='boolean',
         )
     )
-    def list_datasets(self, params):
-        limit, offset, sort = self.getPagingParameters(params)
+    def list_datasets(self, limit, offset, sort, published: bool):
         return crud_dataset.list_datasets(
             self.getCurrentUser(),
-            self.boolParam(constants.PublishedMarker, params),
+            published,
             limit,
             offset,
             sort,
@@ -169,13 +170,13 @@ class DatasetResource(Resource):
         .modelParam("id", level=AccessType.WRITE, **DatasetModelParam)
         .jsonParam(
             "data",
-            description="JSON with the metadata to set",
+            description="schema: MetadataMutableUpdateArgs",
             requireObject=True,
             paramType="body",
         )
     )
     def patch_metadata(self, folder, data):
-        return crud_dataset.update_dataset(folder, data)
+        return crud_dataset.update_metadata(folder, data)
 
     @access.user
     @autoDescribeRoute(
@@ -183,7 +184,7 @@ class DatasetResource(Resource):
         .modelParam("id", level=AccessType.WRITE, **DatasetModelParam)
         .jsonParam(
             "data",
-            description="upsert and delete",
+            description="schema: AttributeUpdateArgs",
             requireObject=True,
             paramType="body",
         )

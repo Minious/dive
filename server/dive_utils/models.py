@@ -100,7 +100,14 @@ class MetadataMutable(BaseModel):
 
 class FrameImage(BaseModel):
     url: str
+    id: str
     filename: str
+
+
+class VideoResource(BaseModel):
+    id: str
+    filename: str
+    url: str
 
 
 class GirderMetadataStatic(MetadataMutable):
@@ -117,7 +124,7 @@ class GirderMetadataStatic(MetadataMutable):
     fps: Union[int, float]
 
     # Optional
-    videoUrl: Optional[str]
+    video: Optional[VideoResource]
     originalFps: Optional[Union[int, float]]
     ffprobe_info: Optional[Dict[str, Any]]
     foreign_media_id: Optional[str]
