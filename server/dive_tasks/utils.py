@@ -135,20 +135,17 @@ def organize_folder_for_training(data_dir: Path, downloaded_groundtruth: Path):
     return groundtruth
 
 
-def download_source_media(
-    girder_client: GirderClient, folder: types.GirderModel, dest: Path
-) -> List[str]:
-    """
-    Download source media for folder from girder
-    """
-    dataset = models.GirderMetadataStatic(**girder_client.get(f'dive_dataset/{folder["_id"]}'))
+def download_source_media(girder_client: GirderClient, datasetId: str, dest: Path) -> List[str]:
+    """download media for dataset to dest path"""
+    media = models.DatasetSourceMedia(**girder_client.get(f'dive_dataset/{datasetId}/media'))
+    dataset = models.GirderMetadataStatic(**girder_client.get(f'dive_dataset/{datasetId}'))
     if dataset.type == constants.ImageSequenceType:
-        for frameImage in dataset.imageData:
+        for frameImage in media.imageData:
             girder_client.downloadItem(frameImage.id, str(dest))
-        return [str(dest / image.filename) for image in dataset.imageData]
-    elif dataset.type == constants.VideoType and dataset.video is not None:
-        destination_path = str(dest / dataset.video.filename)
-        girder_client.downloadFile(dataset.video.id, destination_path)
+        return [str(dest / image.filename) for image in media.imageData]
+    elif dataset.type == constants.VideoType and media.video is not None:
+        destination_path = str(dest / media.video.filename)
+        girder_client.downloadFile(media.video.id, destination_path)
         return [destination_path]
     else:
         raise Exception(f"unexpected metadata {str(dataset.dict())}")

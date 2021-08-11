@@ -148,7 +148,7 @@ if (argv._.includes('viame2json')) {
   const settings = getSettings();
   const run = async () => {
     const out = await settings.platform.checkMedia(settings, argv.file as string);
-    console.log(out);
+    stdout.write(JSON.stringify(out));
   };
   run();
 } else if (argv._.includes('list-config')) {

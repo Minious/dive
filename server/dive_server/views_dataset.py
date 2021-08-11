@@ -29,10 +29,11 @@ class DatasetResource(Resource):
 
         self.route("GET", (), self.list_datasets)
         self.route("GET", (":id",), self.get_meta)
+        self.route("GET", (":id", "media"), self.get_media)
         self.route("GET", (":id", "export"), self.export)
         self.route("GET", ("validate_files",), self.validate_files)
 
-        self.route("PATCH", (":id"), self.patch_metadata)
+        self.route("PATCH", (":id",), self.patch_metadata)
 
         # do we make this another resource in girder?
         self.route("PATCH", (":id", "attributes"), self.patch_attributes)
@@ -97,10 +98,18 @@ class DatasetResource(Resource):
         Description("Get dataset metadata").modelParam(
             "id", level=AccessType.READ, **DatasetModelParam
         )
-        # TODO add a "camera" query param
     )
     def get_meta(self, folder):
         return crud_dataset.get_dataset(folder, self.getCurrentUser()).dict(exclude_none=True)
+
+    @access.user
+    @autoDescribeRoute(
+        Description("Get dataset source media").modelParam(
+            "id", level=AccessType.READ, **DatasetModelParam
+        )
+    )
+    def get_media(self, folder):
+        return crud_dataset.get_media(folder, self.getCurrentUser()).dict(exclude_none=True)
 
     @access.public(scope=TokenScope.DATA_READ, cookie=True)
     @autoDescribeRoute(

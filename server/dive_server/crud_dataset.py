@@ -1,3 +1,4 @@
+import json
 from typing import List, Optional
 
 from girder.models.folder import Folder
@@ -67,8 +68,19 @@ def get_dataset(
     dsFolder: types.GirderModel, user: types.GirderModel
 ) -> models.GirderMetadataStatic:
     """Transform a girder folder into a dataset metadata object"""
+    crud.verify_dataset(dsFolder)
+    return models.GirderMetadataStatic(
+        id=str(dsFolder['_id']),
+        annotate=fromMeta(dsFolder, constants.DatasetMarker),  # trivially true
+        createdAt=str(dsFolder['created']),
+        name=dsFolder['name'],
+        **dsFolder['meta'],
+    )
+
+
+def get_media(dsFolder: types.GirderModel, user: types.GirderModel) -> models.DatasetSourceMedia:
     videoResource = None
-    imageData: List[models.FrameImage] = []
+    imageData: List[models.MediaResource] = []
     crud.verify_dataset(dsFolder)
     source_type = fromMeta(dsFolder, constants.TypeMarker)
 
@@ -84,14 +96,14 @@ def get_dataset(
         if videoItem:
             videoFile: types.GirderModel = Item().childFiles(videoItem)[0]
             videoResource = models.VideoResource(
-                id=videoFile['_id'],
+                id=str(videoFile['_id']),
                 url=get_url(videoFile),
                 filename=videoFile['name'],
             )
     elif source_type == constants.ImageSequenceType:
         imageData = [
-            models.FrameImage(
-                id=image["_id"],
+            models.MediaResource(
+                id=str(image["_id"]),
                 url=get_url(image, modelType='item'),
                 filename=image['name'],
             )
@@ -100,13 +112,9 @@ def get_dataset(
     else:
         raise ValueError(f'Unrecognized source type: {source_type}')
 
-    return models.GirderMetadataStatic(
-        id=str(dsFolder['_id']),
+    return models.DatasetSourceMedia(
         imageData=imageData,
         video=videoResource,
-        createdAt=str(dsFolder['created']),
-        name=dsFolder['name'],
-        **dsFolder['meta'],
     )
 
 
@@ -178,7 +186,10 @@ def export_dataset_zipstream(
         mediaRegex = constants.videoRegex
 
     def makeMetajson():
-        yield get_dataset(dsFolder, user).json(exclude_none=True)
+        """Include dataset metadtata file with full export"""
+        meta = get_dataset(dsFolder, user)
+        media = get_media(dsFolder, user)
+        yield json.dumps({**meta.json(exclude_none=True), **media.json(exclude_none=True)})
 
     def stream():
         z = ziputil.ZipGenerator(dsFolder['name'])

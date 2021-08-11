@@ -1,20 +1,34 @@
 import { GirderModel } from '@girder/components/src';
-import { DatasetMeta, DatasetMetaMutable, DatasetType } from 'dive-common/apispec';
+import {
+  DatasetMeta, DatasetMetaMutable, DatasetType, FrameImage,
+} from 'dive-common/apispec';
 
 /**
  * Static properties loaded from the girder folder data/metadata
  */
+
 interface GirderMetadataStatic extends DatasetMetaMutable {
   id: string;
-  type: Readonly<DatasetType>;
-  fps: Readonly<number>;
   name: string;
   createdAt: string;
-  ffprobe_info?: Record<string, string>;
+  type: Readonly<DatasetType>;
+  fps: Readonly<number>;
   annotate: boolean;
+
+  /* optional */
+  originalFps?: number;
+  ffprobe_info?: Record<string, string>;
   foreign_media_id?: string;
 }
 
+interface MediaResource extends FrameImage {
+  id: string;
+}
+
+interface DatasetSourceMedia {
+  imageData: MediaResource[];
+  video?: MediaResource;
+}
 /** A girder folder model with dataset metadata */
 interface GirderDatasetModel extends GirderModel {
   meta: GirderMetadataStatic;
@@ -26,6 +40,7 @@ interface GirderDatasetModel extends GirderModel {
 type GirderMetadata = GirderMetadataStatic & DatasetMeta;
 
 export {
+  DatasetSourceMedia,
   GirderDatasetModel,
   GirderMetadataStatic,
   GirderMetadata,

@@ -1,6 +1,10 @@
 import { AxiosError } from 'axios';
-import { ref } from '@vue/composition-api';
 import { isRootLocation, GirderModel } from '@girder/components/src';
+import {
+  calibrationFileTypes, inputAnnotationFileTypes, inputAnnotationTypes,
+  otherImageTypes, otherVideoTypes, websafeImageTypes, websafeVideoTypes,
+} from 'dive-common/constants';
+import { DatasetType } from 'dive-common/apispec';
 
 interface Location {
   type?: 'collections' | 'users' | 'root';
@@ -40,17 +44,45 @@ function getResponseError(error: AxiosError): string {
   return response?.data?.message || error;
 }
 
-function withRestError(callable: () => Promise<unknown>) {
-  const error = ref('');
-
-  function wrapped() {
-    error.value = '';
-    return callable().catch((err) => {
-      error.value = getResponseError(err);
-      throw err;
-    });
+async function openFromDisk(datasetType: DatasetType | 'calibration' | 'annotation'):
+Promise<{ canceled: boolean; filePaths: string[]; fileList?: File[]}> {
+  const input: HTMLInputElement = document.createElement('input');
+  input.type = 'file';
+  const baseTypes: string[] = inputAnnotationFileTypes.map((item) => `.${item}`);
+  if (!['calbiration', 'annotation'].includes(datasetType)) {
+    input.multiple = true;
   }
-  return { func: wrapped, error };
+  if (datasetType === 'image-sequence') {
+    input.accept = baseTypes.concat(websafeImageTypes).concat(otherImageTypes).join(',');
+  } else if (datasetType === 'video') {
+    input.accept = baseTypes.concat(websafeVideoTypes).concat(otherVideoTypes).join(',');
+  } else if (datasetType === 'calibration') {
+    input.accept = calibrationFileTypes.map((item) => `.${item}`).join(',');
+  } else if (datasetType === 'annotation') {
+    input.accept = inputAnnotationTypes
+      .concat(inputAnnotationFileTypes.map((item) => `.${item}`)).join(',');
+  }
+  return new Promise(((resolve) => {
+    input.onchange = (event) => {
+      if (event) {
+        const { files } = event.target as HTMLInputElement;
+        if (files) {
+          const fileList = Array.from(files);
+          const response = {
+            canceled: !files.length,
+            fileList,
+            filePaths: fileList.map((item) => item.name),
+          };
+          return resolve(response);
+        }
+      }
+      return resolve({
+        canceled: true,
+        filePaths: [],
+      });
+    };
+    input.click();
+  }));
 }
 
 
@@ -58,5 +90,5 @@ export {
   getLocationFromRoute,
   getPathFromLocation,
   getResponseError,
-  withRestError,
+  openFromDisk,
 };

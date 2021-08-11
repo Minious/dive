@@ -4,7 +4,7 @@ import {
 } from '@vue/composition-api';
 import { GirderAuthentication } from '@girder/components/src';
 
-import { useGirderRest } from '../plugins/girder';
+import { useGirderRest } from 'platform/web-girder/plugins/girder';
 
 export default defineComponent({
   name: 'Login',

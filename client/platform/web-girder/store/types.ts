@@ -1,5 +1,5 @@
 import type { GirderModel } from '@girder/components/src';
-import type { BrandData } from 'platform/web-girder/api/viame.service';
+import type { BrandData } from 'platform/web-girder/api';
 import type { GirderMetadata } from 'platform/web-girder/constants';
 
 export interface LocationState {

@@ -3,10 +3,10 @@ import {
   computed, defineComponent, Ref, ref, PropType,
 } from '@vue/composition-api';
 import { GirderFileManager } from '@girder/components/src';
-import { withRestError } from 'platform/web-girder/utils';
+import useRequest from 'dive-common/use/useRequest';
 import { GirderDatasetModel } from 'platform/web-girder/constants';
-import { clone } from '../api/viame.service';
-import { useGirderRest } from '../plugins/girder';
+import { useGirderRest } from 'platform/web-girder/plugins/girder';
+import { clone } from 'platform/web-girder/api';
 
 export default defineComponent({
   components: { GirderFileManager },
@@ -51,7 +51,8 @@ export default defineComponent({
       }
     }
 
-    const { func: doClone, error: cloneError } = withRestError(async () => {
+    const { request: _cloneRequest, error: cloneError } = useRequest();
+    const doClone = () => _cloneRequest(async () => {
       if (!props.source) {
         throw new Error('No source dataset!');
       }
@@ -60,7 +61,7 @@ export default defineComponent({
         name: newName.value,
         parentFolderId: location.value._id,
       });
-      root.$router.push({ name: 'viewer', params: { id: newDataset._id } });
+      root.$router.push({ name: 'viewer', params: { id: newDataset.data._id } });
     });
 
     return {

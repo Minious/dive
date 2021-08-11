@@ -231,7 +231,7 @@ def run_pipeline(self: Task, params: PipelineJob):
 
     # Download source media
     input_folder: GirderModel = gc.getFolder(input_folder_id)
-    input_media_list = download_source_media(gc, input_folder, input_path)
+    input_media_list = download_source_media(gc, input_folder_id, input_path)
 
     if input_type == VideoType:
         input_fps = fromMeta(input_folder, FPSMarker)
@@ -358,7 +358,7 @@ def train_pipeline(
                 download_path, download_path / groundtruth["name"]
             )
             # Download input media
-            input_media_list = download_source_media(gc, source_folder, download_path)
+            input_media_list = download_source_media(gc, str(source_folder["_id"]), download_path)
             if fromMeta(source_folder, TypeMarker) == VideoType:
                 download_path = Path(input_media_list[0])
             # Set media source location
@@ -455,7 +455,7 @@ def convert_video(self: Task, folderId: str, itemId: str):
     folderData = gc.getFolder(folderId)
     requestedFps = fromMeta(folderData, FPSMarker)
 
-    file_name = download_source_media(gc, folderData, Path(input_directory.name))[0]
+    file_name = download_source_media(gc, folderId, Path(input_directory.name))[0]
 
     command = [
         "ffprobe",

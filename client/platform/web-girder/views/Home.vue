@@ -14,7 +14,7 @@ import { usePrompt } from 'dive-common/vue-utilities/prompt-service';
 
 import { getFolder } from 'platform/web-girder/api/girder.service';
 import { getLocationFromRoute } from '../utils';
-import { deleteResources } from '../api/viame.service';
+import { deleteResources } from '../api';
 import { getMaxNSummaryUrl } from '../api/summary.service';
 import Export from './Export.vue';
 import Upload from './Upload.vue';
