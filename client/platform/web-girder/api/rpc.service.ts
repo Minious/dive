@@ -1,5 +1,5 @@
 import girderRest from 'platform/web-girder/plugins/girder';
-import { Pipe } from 'stream';
+import { Pipe } from 'dive-common/apispec';
 
 function postProcess(folderId: string) {
   return girderRest.post(`dive_rpc/postprocess/${folderId}`);

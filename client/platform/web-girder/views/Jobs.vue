@@ -1,6 +1,6 @@
 <script lang="ts">
 import { defineComponent, ref } from '@vue/composition-api';
-import type { GirderModel, GirderJobList } from '@girder/components/src';
+import { GirderModel, GirderJobList } from '@girder/components/src';
 import { setUsePrivateQueue } from 'platform/web-girder/api';
 import { useGirderRest } from 'platform/web-girder/plugins/girder';
 

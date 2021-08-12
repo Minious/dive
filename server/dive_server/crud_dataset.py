@@ -71,7 +71,6 @@ def get_dataset(
     crud.verify_dataset(dsFolder)
     return models.GirderMetadataStatic(
         id=str(dsFolder['_id']),
-        annotate=fromMeta(dsFolder, constants.DatasetMarker),  # trivially true
         createdAt=str(dsFolder['created']),
         name=dsFolder['name'],
         **dsFolder['meta'],
@@ -95,7 +94,7 @@ def get_media(dsFolder: types.GirderModel, user: types.GirderModel) -> models.Da
         )
         if videoItem:
             videoFile: types.GirderModel = Item().childFiles(videoItem)[0]
-            videoResource = models.VideoResource(
+            videoResource = models.MediaResource(
                 id=str(videoFile['_id']),
                 url=get_url(videoFile),
                 filename=videoFile['name'],
